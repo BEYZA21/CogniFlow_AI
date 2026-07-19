@@ -2,8 +2,14 @@ import json
 import os
 import requests
 
+import json
+import os
+import requests
+from dotenv import load_dotenv  # <-- Bunu ekle
 
-API_KEY = os.environ.get("GEMINI_API_KEY", "")
+load_dotenv(dotenv_path="src/.env") 
+
+API_KEY = os.environ.get("GEMINI_API_KEY")
 
 def bilissel_kapsayici_donustur(ham_metin: str, veri_bilimi_raporu: dict) -> str:
     """
@@ -41,10 +47,11 @@ DÖNÜŞÜM KURALLARI:
     
     try:
         if not API_KEY:
+            print("Uyarı: API anahtarı bulunamadı, simülasyon modu aktif.") # Terminalde görürsün
             return simule_donusturulmus_metin_uret(ham_metin)
-
-        response = requests.post(url, headers=headers, json=payload, timeout=10)
         
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+      
         if response.status_code == 200:
             res_data = response.json()
             return res_data['candidates'][0]['content']['parts'][0]['text']
