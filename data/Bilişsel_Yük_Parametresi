@@ -1,0 +1,74 @@
+ import re
+from dataclasses import dataclass
+ 
+VOWELS = "aeiouAEIOU" + "ıİöÖüÜ"
+ 
+def hece_say(kelime: str) -> int:
+    return sum(1 for harf in kelime if harf in VOWELS)
+ 
+def cumlelere_ayir(metin: str):
+    return [c.strip() for c in re.split(r'(?<=[.!?])\s+', metin) if c.strip()]
+ 
+def kelimelere_ayir(metin: str):
+    return re.findall(r"[A-Za-zÇĞİÖŞÜçğıöşü]+", metin)
+ 
+@dataclass
+class BilisselYukRaporu:
+    genel_skor: float
+    dehb_yuku: float
+    disleksi_yuku: float
+    detaylar: dict
+ 
+def hesapla_temel_metrikler(metin: str) -> dict:
+    cumleler = cumlelere_ayir(metin)
+    kelimeler = kelimelere_ayir(metin)
+ 
+    toplam_kelime = len(kelimeler)
+    toplam_cumle = max(len(cumleler), 1)
+    toplam_hece = sum(hece_say(k) for k in kelimeler)
+ 
+    ort_cumle_uzunlugu = toplam_kelime / toplam_cumle
+    ort_hece_kelime = toplam_hece / max(toplam_kelime, 1)
+    ort_kelime_uzunlugu = sum(len(k) for k in kelimeler) / max(toplam_kelime, 1)
+ 
+    benzersiz = set(k.lower() for k in kelimeler)
+    ttr = len(benzersiz) / max(toplam_kelime, 1)
+ 
+    return {
+        "ortalama_cumle_uzunlugu": ort_cumle_uzunlugu,
+        "ortalama_hece_kelime": ort_hece_kelime,
+        "ortalama_kelime_uzunlugu": ort_kelime_uzunlugu,
+        "ttr": ttr,
+    }
+ 
+def ateşman_formulu(ort_hece_kelime: float, ort_kelime_cumle: float) -> float:
+    return 198.825 - 40.175 * ort_hece_kelime - 2.610 * ort_kelime_cumle
+ 
+def normalize(deger: float, min_v: float, max_v: float) -> float:
+    return max(0.0, min(1.0, (deger - min_v) / (max_v - min_v)))
+ 
+def bilissel_yuk_hesapla(metin: str) -> BilisselYukRaporu:
+    m = hesapla_temel_metrikler(metin)
+ 
+    acu_norm = normalize(m["ortalama_cumle_uzunlugu"], 5, 30)
+    hece_norm = normalize(m["ortalama_hece_kelime"], 1.5, 4.5)
+    kelime_uz_norm = normalize(m["ortalama_kelime_uzunlugu"], 4, 12)
+    ttr_norm = normalize(m["ttr"], 0.3, 0.9)
+ 
+    dehb_yuku = 0.5 * acu_norm + 0.3 * ttr_norm + 0.2 * hece_norm
+    disleksi_yuku = 0.45 * kelime_uz_norm + 0.35 * hece_norm + 0.2 * ttr_norm
+    genel = 0.5 * dehb_yuku + 0.5 * disleksi_yuku
+ 
+    return BilisselYukRaporu(
+        genel_skor=round(genel, 3),
+        dehb_yuku=round(dehb_yuku, 3),
+        disleksi_yuku=round(disleksi_yuku, 3),
+        detaylar=m,
+    )
+ 
+if __name__ == "__main__":
+    ornek = """Türkiye'nin farklı bölgelerinde, iklim koşullarının çeşitliliğine bağlı
+    olarak gelişen tarımsal üretim modelleri, hem yerel ekonomiye hem de ulusal
+    gıda güvenliğine önemli katkılar sağlamaktadır."""
+    rapor = bilissel_yuk_hesapla(ornek)
+    print(rapor)
